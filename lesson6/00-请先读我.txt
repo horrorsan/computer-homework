@@ -1,0 +1,9 @@
+第 6 次课作业包
+滑动窗口  Sliding Window / Incremental Update
+
+1. 阅读 docs/lesson-06.md
+2. 只改 src/herodungeon/m1_inventory/sliding_window.py
+   填 max_damage_window / window_states
+3. 不要改 tests/
+4. pytest tests/test_sliding_window-第6课.py
+5. 推到自己的私有仓，把 haroldss 加成 Collaborator
