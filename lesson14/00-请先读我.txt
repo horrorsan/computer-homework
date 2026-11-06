@@ -1,0 +1,10 @@
+第 14 次课作业包（实践课，机房 C05）
+行为树基础：tick / Sequence / Selector / 短路 / RUNNING
+
+1. 阅读 docs/lesson-14.md（含机房流程）
+2. 只改 src/herodungeon/m3_behavior_tree/behavior_tree.py（Sequence.tick、Selector.tick）
+3. 不要改 tests/
+4. 不要写 monster_ai.py（第 15 次课）
+5. pytest tests/test_behavior_tree-第14课.py
+6. git commit -m "feat(m3): behavior tree engine with tick"，推到自己的私有仓，把 haroldss 加成 Collaborator
+7. 截止：当堂完成；没做完的第 15 次课前补交。计入小项目 3「行为树引擎」（建议）

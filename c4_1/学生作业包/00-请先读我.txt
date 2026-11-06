@@ -1,0 +1,7 @@
+C4-1 学生作业包（《机器人系统设计》第四章第 1 次课）
+
+1. 先读 README.md 与 docs/lesson-c4-1.md
+2. 只改 src/roslam/c4_1/ 下标了 TODO 的函数
+3. 不要改 tests/
+4. 本课不需要 ROS / 实车；纯 Python 即可
+5. 验收：pytest tests/

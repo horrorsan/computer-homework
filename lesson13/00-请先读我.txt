@@ -1,0 +1,10 @@
+第 13 次课作业包
+0-1 背包：手填表 / 贪心 160 vs DP 220
+
+1. 阅读 docs/lesson-13.md
+2. 只改 src/herodungeon/m3_behavior_tree/dp_basics.py（fill_table、greedy_by_ratio）
+3. 不要改 tests/
+4. 不要写 dp.py 的事件和反推（第 16 次课）
+5. pytest tests/test_dp_basics-第13课.py
+6. 推到自己的私有仓，把 haroldss 加成 Collaborator
+7. 截止：第 16 次课上课前；不单独计分（课堂参与 + Git 习惯，第 16 课 DP 前置检查）
