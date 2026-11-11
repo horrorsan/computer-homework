@@ -54,7 +54,27 @@ def classify_scenario(known: Iterable[str], estimate: Iterable[str]) -> ProblemK
     * slam — known has neither map nor pose; estimate has both
     * otherwise raise ValueError
     """
-    # TODO: 归一化 known / estimate
-    # TODO: 按三问题表判定并返回 ProblemKind
-    # TODO: 无法判定时 raise ValueError
-    raise NotImplementedError("implement classify_scenario")
+    known_set = _normalize(known)
+    estimate_set = _normalize(estimate)
+
+    known_map = "map" in known_set
+    known_pose = "pose" in known_set
+
+    estimate_map = "map" in estimate_set
+    estimate_pose = "pose" in estimate_set
+
+    if known_map and not known_pose and estimate_pose and not estimate_map:
+        return ProblemKind.LOCALIZATION
+
+    if known_pose and not known_map and estimate_map and not estimate_pose:
+        return ProblemKind.MAPPING
+
+    if (
+        not known_map
+        and not known_pose
+        and estimate_map
+        and estimate_pose
+    ):
+        return ProblemKind.SLAM
+
+    raise ValueError("cannot classify scenario")

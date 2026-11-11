@@ -39,8 +39,31 @@ def reconstruct_items(
     recorder: EventRecorder | None = None,
 ) -> list[Item]:
     """从填好的表里，回溯出带走的包。规则见文件开头的说明。"""
-    # TODO：按文件开头的“做法”，从最后一行往上回溯
-    raise NotImplementedError("请先完成 reconstruct_items")
+    
+    if recorder is None:
+        recorder = EventRecorder()
+
+    chosen: list[Item] = []
+    i = len(items)
+    w = capacity
+
+    while i > 0:
+        item = items[i - 1]
+
+        if table[i][w] == table[i - 1][w]:
+
+            recorder.emit("skip_item", SOURCE, item_id=item.id, remaining=w)
+        else:
+            chosen.append(item)
+            w -= item.weight
+            recorder.emit("choose", SOURCE, item_id=item.id, remaining=w)
+
+        i -= 1
+
+        chosen.reverse()
+    recorder.emit("chosen", SOURCE, item_ids=[item.id for item in chosen])
+
+    return chosen
 
 
 # ---------------------------------------------------------------------------

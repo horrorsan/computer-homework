@@ -1,0 +1,10 @@
+{
+  "type": "synthetic teaching fixtures, NOT real images or real ORB-SLAM logs",
+  "seed": 20261109,
+  "pose": "static 3D points with exact zero-distortion pinhole projection, known R21/t21",
+  "matching": "synthetic 256-bit descriptors in uint8 (N,32), NOT ORB extracted from real photographs; second array permuted and one bit flipped",
+  "K_units": "focal and principal point in pixels; fixture resolution reference 640x480",
+  "coordinates": "P2=R21 P1+t21; P1 is first-camera frame",
+  "scale": "fixture geometry uses declared synthetic meter units; recoverPose output t is still normalized, not measured meters",
+  "scoring": "multi-point scoring with intentionally perturbed synthetic pixel observations; not BA optimizer"
+}

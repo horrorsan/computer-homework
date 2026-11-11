@@ -1,0 +1,90 @@
+[
+  {
+    "id": "T1",
+    "function": "hamming_bits",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 8,
+    "reading": "03",
+    "ppt_pages_student_friendly_48": "6-8",
+    "suggested_minutes": 5,
+    "code_rubric_points": 5,
+    "optional": false
+  },
+  {
+    "id": "T2",
+    "function": "world_to_camera",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 14,
+    "reading": "01",
+    "ppt_pages_student_friendly_48": "10-12",
+    "suggested_minutes": 8,
+    "code_rubric_points": 10,
+    "optional": false
+  },
+  {
+    "id": "T3",
+    "function": "project_pinhole",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 22,
+    "reading": "02",
+    "ppt_pages_student_friendly_48": "13-15",
+    "suggested_minutes": 12,
+    "code_rubric_points": 15,
+    "optional": false
+  },
+  {
+    "id": "T4",
+    "function": "reprojection_scores",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 31,
+    "reading": "06",
+    "ppt_pages_student_friendly_48": "22-25",
+    "suggested_minutes": 15,
+    "code_rubric_points": 15,
+    "optional": false
+  },
+  {
+    "id": "T5",
+    "function": "match_orb_descriptors",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 44,
+    "reading": "03",
+    "ppt_pages_student_friendly_48": "31-33",
+    "suggested_minutes": 15,
+    "code_rubric_points": 10,
+    "optional": false
+  },
+  {
+    "id": "T6",
+    "function": "recover_one_pose",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 55,
+    "reading": "04+05",
+    "ppt_pages_student_friendly_48": "33-36",
+    "suggested_minutes": 15,
+    "code_rubric_points": 10,
+    "optional": false
+  },
+  {
+    "id": "T7",
+    "function": "camera_center_in_first",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 67,
+    "reading": "01+05",
+    "ppt_pages_student_friendly_48": "35/45",
+    "suggested_minutes": null,
+    "code_rubric_points": null,
+    "optional": true
+  },
+  {
+    "id": "T8",
+    "function": "scale_invariance_pixels",
+    "file": "student_tasks.py",
+    "starting_line_in_release": 75,
+    "reading": "02+05",
+    "ppt_pages_student_friendly_48": "20",
+    "suggested_minutes": null,
+    "code_rubric_points": null,
+    "optional": true
+  }
+]
