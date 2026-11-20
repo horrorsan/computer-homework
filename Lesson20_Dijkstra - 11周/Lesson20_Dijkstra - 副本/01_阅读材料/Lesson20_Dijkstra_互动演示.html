@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第20课 · Dijkstra 交互演示</title><style>
+:root{--navy:#162C46;--teal:#087D73;--mint:#E7F5F2;--pale:#F1F5F9;--amber:#FFF0CB;--amber2:#F5B942;--grey:#8296A6;--red:#B4432F}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;color:var(--navy);background:#fff;line-height:1.65;font-size:15px}
+header{padding:18px 28px 6px}
+.tag{display:inline-block;background:var(--mint);color:var(--teal);font-weight:700;padding:3px 12px;border-radius:4px;font-size:13px}
+h1{font-size:28px;margin:8px 0 4px}
+h2{font-size:17px;margin:0 0 8px;color:var(--teal)}
+.lead{margin:0;max-width:1180px;font-size:16px}
+main{display:grid;grid-template-columns:minmax(440px,1.1fr) minmax(380px,1fr);gap:18px;padding:12px 28px 20px;align-items:start}
+@media(max-width:1000px){main{grid-template-columns:1fr}}
+.panel{background:var(--pale);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.panel.white{background:#fff;border:1px solid #D6DEE6}
+.bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
+.bar label{font-size:13px;display:flex;align-items:center;gap:4px}
+select,input[type=number]{font:inherit;font-size:13px;padding:3px 6px;border:1px solid #B8C4CF;border-radius:4px;background:#fff;color:var(--navy)}
+input[type=number]{width:54px}
+button{font:inherit;font-size:14px;border:0;border-radius:5px;padding:6px 14px;background:var(--teal);color:#fff;cursor:pointer}
+button.ghost{background:#fff;color:var(--teal);border:1px solid var(--teal)}
+button:disabled{opacity:.4;cursor:default}
+button.exp{background:var(--mint);color:var(--teal);border:1px solid var(--teal);font-size:13px;padding:4px 10px}
+svg{display:block;width:100%;height:auto;max-height:520px;background:#fff;border-radius:6px;user-select:none}
+.msg{background:#fff;border-left:5px solid var(--teal);padding:8px 12px;border-radius:0 6px 6px 0;min-height:76px;font-size:15px}
+.msg b{color:var(--teal)}
+.flash{margin:6px 0 0;padding:6px 10px;background:var(--amber);border-radius:5px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:38px;padding:6px;background:#fff;border-radius:6px;border:1px dashed #B8C4CF}
+.chip{background:var(--mint);color:var(--navy);border:1px solid var(--teal);border-radius:5px;padding:2px 9px;font-size:14px;font-weight:600}
+.chip.head{background:var(--teal);color:#fff}
+.chip.stale{opacity:.45;text-decoration:line-through}
+.chip.pick{cursor:pointer;box-shadow:0 0 0 2px var(--amber2)}
+.small{font-size:13px;color:#4A5F77}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff}
+th,td{border:1px solid #D6DEE6;padding:3px 8px;text-align:center}
+th{background:var(--mint);color:var(--teal)}
+.scroll{max-height:200px;overflow:auto}
+.think{background:var(--amber);border-radius:6px;padding:8px 12px;font-size:14.5px}
+.good{color:var(--teal);font-weight:700}.bad{color:var(--red);font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:#4A5F77;margin-top:6px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #9AA9B8}
+.labs{padding:0 28px 30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.lab{border:1px solid #D6DEE6;border-radius:8px;padding:12px 14px}
+.lab h3{margin:0 0 4px;font-size:15.5px}
+.lab p{margin:4px 0 8px;font-size:14px}
+footer{padding:0 28px 26px;font-size:13px;color:#4A5F77}
+kbd{background:#fff;border:1px solid #B8C4CF;border-radius:3px;padding:0 5px;font-size:12px}
+</style></head><body>
+<header><span class="tag">第20课 · M4-4 · 带权寻路 Dijkstra</span>
+<h1>Dijkstra：步数少不等于费用低，先取“累计费用最小”的候选</h1>
+<p class="lead">这个页面可以直接在浏览器中打开运行。每走一步，都能看到<b>取出谁、算出什么候选、旧记录有没有被改小（松弛）</b>。先跑课件里的道路图，再把地形画成沼泽和岩地，和 BFS 比一比。</p></header>
+<main>
+<section>
+ <div class="panel">
+  <div class="bar">
+   <label>地图 <select id="graphSel"><option value="road">道路图 R（课件：家 S → 车站 T）</option><option value="grid">地牢网格（进格收费）</option></select></label>
+   <label>预设 <select id="presetSel"></select></label>
+   <label>行 <input type="number" id="rows" min="2" max="10" value="6"></label>
+   <label>列 <input type="number" id="cols" min="2" max="12" value="8"></label>
+   <label>点击格子 <select id="tool"><option value="flat">平地（费用 1）</option><option value="rock">岩地（费用 3）</option><option value="swamp">沼泽（费用 5）</option><option value="wall">墙</option><option value="start">设起点 S</option><option value="goal">设终点 T</option></select></label>
+  </div>
+  <svg id="board" viewBox="0 0 640 420"></svg>
+  <div class="legend"><span><i style="background:#F5B942"></i>当前取出</span><span><i style="background:#fff;border:2px dashed #C98A00"></i>堆里的候选</span><span><i style="border:3px solid #087D73;background:#fff"></i>已定案 ✓</span><span><i style="background:#E3DAC5"></i>岩地3</span><span><i style="background:#BDDFD6"></i>沼泽5</span><span><i style="background:#087D73"></i>最终路线</span><span>数字=当前最好累计费用 g，∞=尚未找到</span></div>
+ </div>
+ <div class="panel">
+  <div class="bar">
+   <button id="bStart" class="ghost">⏮ 回到开头</button><button id="bBack" class="ghost">◀ 上一步</button><button id="bNext">下一步 ▶</button><button id="bPlay">▶ 自动播放</button><button id="bEnd" class="ghost">⏭ 直接到结果</button>
+  </div>
+  <div class="bar">
+   <label>速度 <input type="range" id="speed" min="150" max="1500" value="800" style="width:120px"></label>
+   <label><input type="checkbox" id="coarse">每次一整轮（取出 X 并检查完所有出边）</label>
+   <label><input type="checkbox" id="arrows" checked>显示来路箭头</label>
+   <label><input type="checkbox" id="predict">预测模式：先猜下一个取出谁</label>
+  </div>
+  <div class="small">快捷键：<kbd>→</kbd> 下一步　<kbd>←</kbd> 上一步　<kbd>空格</kbd> 播放/暂停。网格模式下点击格子可改地形，按住鼠标可连续涂抹。</div>
+ </div>
+</section>
+<section>
+ <div class="panel white"><h2>这一步发生了什么？</h2><div id="msg" class="msg"></div><div id="flash" class="flash" style="display:none"></div></div>
+ <div class="panel">
+  <h2>候选堆（按累计费用从小到大，最左边先取）</h2><div id="heapChips" class="chips"></div>
+  <div class="small" id="heapHint" style="margin-top:6px"></div>
+  <div class="bar" style="margin-top:10px">
+   <label>发现节点后 <select id="relaxSel"><option value="relax">还能被改小（松弛）— 正确</option><option value="lock">发现即定案，不再更新 — 对照</option></select></label>
+   <label>何时停止 <select id="stopSel"><option value="pop">终点被取出才停 — 正确</option><option value="discover">第一次发现终点就停 — 对照</option></select></label>
+  </div>
+ </div>
+ <div class="panel"><h2>账本：当前最好累计费用 best 与来路</h2><div class="scroll"><table id="ledger"></table></div></div>
+ <div class="panel"><h2>统计</h2>
+  <table><tr><th>取出次数</th><th>跳过旧记录</th><th>松弛成功</th><th>入堆次数</th><th>本次路线费用</th><th>真实最低费用</th></tr><tr><td id="sPops">0</td><td id="sStale">0</td><td id="sRelax">0</td><td id="sPush">0</td><td id="sCost">—</td><td id="sOpt">—</td></tr></table>
+  <div id="verdict" style="margin-top:8px"></div>
+ </div>
+ <div class="panel white"><h2>BFS 对照：同一张图，两种算法的答案</h2><table id="cmp"></table><div id="cmpTxt" class="small" style="margin-top:6px"></div></div>
+ <div class="think" id="think"></div>
+</section>
+</main>
+<div class="labs">
+ <div class="lab"><h3>实验① 步数少 ≠ 费用低</h3><p>载入课件道路图，直接看到结果。再切到沼泽网格对比。</p><button class="exp" onclick="lab(1)">载入：道路图（跑完）</button> <button class="exp" onclick="lab(2)">载入：沼泽 vs 绕行</button><p class="small">你应看到：道路图里 BFS 走 2 段花 5，Dijkstra 走 3 段只花 4；网格里 BFS 直穿沼泽花 6，Dijkstra 绕行 4 步只花 4。</p></div>
+ <div class="lab"><h3>实验② 松弛：把 A 从 4 改成 3</h3><p>跳到“取出 B”的那一步，看 B→A 的计算：1+2=3 比旧记录 4 小。</p><button class="exp" onclick="lab(3)">跳到第一次松弛</button><p class="small">你应看到：best[A] 和 came_from[A] <b>同时</b>改变；堆里留下旧的 A=4（变灰划线），稍后弹出时被跳过。</p></div>
+ <div class="lab"><h3>实验③ 看到终点就停（错误）</h3><p>把“何时停止”改成第一次发现终点就停。</p><button class="exp" onclick="lab(4)">载入：道路图 + 发现即停</button><p class="small">你应看到：处理 B 时 T 被记为 8 就停止，费用 8；而 A=3 还没处理，它能把 T 改成 4。<b>找到不等于定案</b>，最小有效候选被取出才可以停。</p></div>
+ <div class="lab"><h3>实验④ 发现即定案（错误）</h3><p>像 BFS 那样“一发现就不再更新”。</p><button class="exp" onclick="lab(5)">载入：道路图 + 发现即定案</button><p class="small">你应看到：A 一直停在 4，T 一直停在 8，费用 8。BFS 的“首次来路就是最短”只在每步同价时成立。</p></div>
+ <div class="lab"><h3>实验⑤ 费用全相同时</h3><p>地形全是平地时，Dijkstra 和 BFS 的总费用应该一致。</p><button class="exp" onclick="lab(6)">载入：全平地 5×5</button><p class="small">你应看到：对照表中两者费用相同（路线可能不同但同样优）。这就是第19课 BFS 作为“等权特例”的位置。</p></div>
+ <div class="lab"><h3>实验⑥ 自己改地形</h3><p>在山地图里把沼泽改成平地，或把平地改成沼泽，预测路线会怎么变，再运行验证。</p><button class="exp" onclick="lab(7)">载入：山地 6×8</button><p class="small">试一试：沼泽费用接近 1 时，两个算法会趋同；沼泽很贵时，Dijkstra 会绕远路，BFS 仍坚持步数最少。</p></div>
+</div>
+<footer>与课件对应：g（累计费用）→ 松弛 → 最小候选先取 → 旧记录跳过 → 取出终点才定案。前提：所有边费用非负；负费用会破坏“最小候选可定案”的理由。同费用候选按入堆先后取。复杂度：堆优化约 O((V+E) log V)。</footer>
+<script>
+
+const NS='http://www.w3.org/2000/svg';
+const $=id=>document.getElementById(id);
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in (attrs||{}))e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function shorten(x1,y1,x2,y2,r1,r2){const dx=x2-x1,dy=y2-y1,d=Math.hypot(dx,dy)||1;return [x1+dx/d*r1,y1+dy/d*r1,x2-dx/d*r2,y2-dy/d*r2];}
+function addMarkers(svg){const defs=el('defs',{},svg);[['ahG','#8296A6'],['ahT','#087D73'],['ahA','#C98A00']].forEach(([id,c])=>{const m=el('marker',{id:id,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'6',markerHeight:'6',orient:'auto'},defs);el('path',{d:'M0,0 L10,5 L0,10 z',fill:c},m);});}
+const Player={steps:[],i:0,timer:null,coarse:false,speed:800,
+ load(steps){this.steps=steps;this.i=0;this.pause();},
+ cur(){return this.steps[this.i];},
+ forward(){let j=this.i+1;if(this.coarse){while(j<this.steps.length-1&&!this.steps[j].major)j++;}if(j<this.steps.length){this.i=j;return true;}return false;},
+ backward(){let j=this.i-1;if(this.coarse){while(j>0&&!this.steps[j].major)j--;}if(j>=0){this.i=j;return true;}return false;},
+ pause(){if(this.timer){clearInterval(this.timer);this.timer=null;}},
+ playing(){return !!this.timer;}
+};
+
+const ROAD={pos:{S:[80,210],A:[320,80],B:[320,340],T:[560,210]},edges:[['S','A',4],['S','B',1],['B','A',2],['B','T',7],['A','T',1]]};
+const cfg={graph:'road',rows:6,cols:8,walls:new Set(),terr:new Map(),start:'0,0',goal:'5,7',relax:'relax',stop:'pop',arrows:true,predict:false};
+const PRESETS={
+ swamp:{name:'沼泽 vs 绕行（2×3）',rows:2,cols:3,walls:[],terr:{'0,1':5},start:'0,0',goal:'0,2'},
+ mount:{name:'山地 6×8',rows:6,cols:8,walls:['1,2','2,2','3,2','4,5','3,5','2,5'],terr:{'0,1':5,'0,2':5,'0,3':3,'1,3':3,'1,4':5,'2,3':3,'2,4':5,'3,3':3,'3,4':5,'4,3':3,'4,4':5,'1,6':3,'2,6':5,'3,6':5,'4,6':3,'5,2':3,'5,3':3},start:'0,0',goal:'5,7'},
+ flat:{name:'全平地 5×5（费用相同）',rows:5,cols:5,walls:['2,1','2,2'],terr:{},start:'0,0',goal:'4,4'},
+ blocked:{name:'被墙隔断（不可达）',rows:4,cols:5,walls:['0,2','1,2','2,2','3,2'],terr:{},start:'1,0',goal:'1,4'}
+};
+let predicted=false,flashMsg='',dragging=false,CMP=null;
+function costOf(id){return cfg.terr.get(id)||1;}
+function makeGraph(){
+ if(cfg.graph==='road'){const out={};ROAD.edges.forEach(([a,b,w])=>{(out[a]=out[a]||[]).push({to:b,w});});
+  return {kind:'road',start:'S',goal:'T',nodes:['S','A','B','T'],label:id=>id,blocked:()=>false,nbrs:id=>out[id]||[]};}
+ const R=cfg.rows,C=cfg.cols,W=cfg.walls,nodes=[],dirs=[[-1,0],[0,1],[1,0],[0,-1]];
+ for(let r=0;r<R;r++)for(let c=0;c<C;c++)nodes.push(r+','+c);
+ return {kind:'grid',start:cfg.start,goal:cfg.goal,nodes,label:id=>'('+id+')',blocked:id=>W.has(id),
+  nbrs:id=>{const [r,c]=id.split(',').map(Number),out=[];for(const [dr,dc] of dirs){const nr=r+dr,nc=c+dc;if(nr<0||nc<0||nr>=R||nc>=C)continue;const k=nr+','+nc;if(!W.has(k))out.push({to:k,w:costOf(k)});}return out;}};
+}
+function tracePath(parent,start,goal){const p=[goal];let g=goal,n=0;while(g!==start&&parent[g]!==undefined&&n++<5000){g=parent[g];p.push(g);}return g===start?p.reverse():null;}
+function pathCost(G,path){let t=0;for(let i=0;i+1<path.length;i++){const e=G.nbrs(path[i]).find(x=>x.to===path[i+1]);t+=e?e.w:0;}return t;}
+function runDijkstra(G,o){
+ const steps=[],L=G.label,best={},parent={},closed=new Set(),stats={pops:0,stale:0,relax:0,pushes:0};let heap=[],seq=0;
+ const sorted=()=>heap.slice().sort((a,b)=>a.g-b.g||a.seq-b.seq);
+ const snap=x=>steps.push(Object.assign({heap:sorted().map(e=>Object.assign({},e)),best:Object.assign({},best),parent:Object.assign({},parent),closed:new Set(closed),stats:Object.assign({},stats)},x));
+ const fin=(path,why)=>{const cost=pathCost(G,path);snap({type:'done',found:true,final:true,major:true,path,cost,cur:G.goal,msg:why+`路线 ${path.map(L).join(' → ')}，共 ${path.length-1} 步，<b>总费用 ${cost}</b>。`});};
+ if(G.blocked(G.start)||G.blocked(G.goal)){snap({type:'done',found:false,final:true,major:true,msg:'<b>起点或终点是墙</b>，直接失败，不展开。'});return steps;}
+ best[G.start]=0;heap.push({g:0,id:G.start,seq:seq++});stats.pushes=1;
+ snap({type:'init',major:true,msg:`<b>初始化</b>：best(${L(G.start)})=0，其余都是 ∞（只是“还没找到”，不是到不了）。把 (0, ${L(G.start)}) 放进堆。`});
+ while(heap.length){
+  heap=sorted();const e=heap.shift();
+  const stale=!o.lock&&(closed.has(e.id)||e.g>best[e.id]);
+  if(stale){stats.stale++;snap({type:'pop',skip:true,popped:e,cur:e.id,major:true,msg:`取出旧记录 ${L(e.id)}=${e.g}。但账本里已经有更小的 <b>${best[e.id]}</b>，这条记录过期了：<b>跳过</b>，不展开，也不算处理。`});continue;}
+  stats.pops++;closed.add(e.id);
+  snap({type:'pop',popped:e,cur:e.id,msg:`<b>取出累计费用最小的候选</b> ${L(e.id)}（g=${e.g}），把它<b>定案</b>。`+(e.id===G.goal?'<br>它就是终点：<b>终点被取出，搜索停止</b>，沿来路回溯。':'<br>下面逐条检查它的出边：候选 = g + 这一段费用。')});
+  if(e.id===G.goal){fin(tracePath(parent,G.start,G.goal),'<b>定案！</b>');return steps;}
+  for(const {to,w} of G.nbrs(e.id)){
+   if(closed.has(to)){snap({type:'check',cur:e.id,cand:to,msg:`出边 ${L(e.id)}→${L(to)}（费用 ${w}）：${L(to)} <b>已定案</b>，不再改。`});continue;}
+   const cand=e.g+w,old=best[to],oldTxt=old===undefined?'∞':old;
+   if(o.lock&&old!==undefined){snap({type:'check',cur:e.id,cand:to,msg:`<span class="bad">（对照做法）</span>出边 ${L(e.id)}→${L(to)}：候选 ${e.g}+${w}=<b>${cand}</b>，旧记录 ${old}。因为“发现过就不更新”，直接跳过——`+(cand<old?`<span class="bad">可是 ${cand} 比 ${old} 更小，这次改进被错过了！</span>`:'这次碰巧没有影响。')});continue;}
+   if(old===undefined||cand<old){
+    best[to]=cand;parent[to]=e.id;heap.push({g:cand,id:to,seq:seq++});stats.pushes++;if(old!==undefined)stats.relax++;
+    snap({type:'check',cur:e.id,cand:to,improved:true,msg:`出边 ${L(e.id)}→${L(to)}（费用 ${w}）：候选 = ${e.g} + ${w} = <b>${cand}</b>；旧记录 ${oldTxt}。`+(old===undefined?`<b>首次发现</b>：best(${L(to)})=${cand}，来路 ${L(to)}←${L(e.id)}，入堆。`:`${cand} &lt; ${old}：<b class="good">松弛成功</b>！best 改成 ${cand}，<b>来路也改成 ${L(e.id)}</b>，新记录入堆（旧的留在堆里，以后跳过）。`)});
+    if(o.stopOnFind&&to===G.goal){fin(tracePath(parent,G.start,G.goal),`<span class="bad">（对照做法）第一次发现终点就停。</span>`);return steps;}
+   }else{snap({type:'check',cur:e.id,cand:to,msg:`出边 ${L(e.id)}→${L(to)}（费用 ${w}）：候选 = ${e.g} + ${w} = ${cand}；旧记录 ${old}。${cand} ≥ ${old}，<b>不更新</b>（相等也不改来路）。`});}
+  }
+  snap({type:'end',cur:e.id,major:true,msg:`${L(e.id)} 的出边检查完毕。堆里还有 ${heap.length} 条记录。`});
+ }
+ snap({type:'done',found:false,final:true,major:true,msg:'<b>堆空了，仍没取出终点</b>：所有能到达的位置都已定案，终点不可达。'});
+ return steps;
+}
+function bfsBaseline(G){
+ if(G.blocked(G.start)||G.blocked(G.goal))return null;
+ const parent={},seen=new Set([G.start]),q=[G.start];let pops=0;
+ while(q.length){const x=q.shift();pops++;if(x===G.goal){const p=tracePath(parent,G.start,G.goal);return {path:p,steps:p.length-1,cost:pathCost(G,p),pops};}for(const {to} of G.nbrs(x))if(!seen.has(to)){seen.add(to);parent[to]=x;q.push(to);}}
+ return null;
+}
+function computeCompare(G){
+ const dj=runDijkstra(G,{}),last=dj[dj.length-1],bf=bfsBaseline(G);
+ CMP={dj:last.found?{path:last.path,steps:last.path.length-1,cost:last.cost,pops:last.stats.pops}:null,bfs:bf};
+}
+/* ---------- UI ---------- */
+function cellSize(){return Math.min(66,Math.floor(600/cfg.cols),Math.floor(420/cfg.rows));}
+function bgOf(id){const t=cfg.terr.get(id);return t===5?'#BDDFD6':(t===3?'#E3DAC5':'#fff');}
+function fmt(v){return v===undefined?'∞':v;}
+function drawBoard(s,G){
+ const svg=$('board');svg.innerHTML='';addMarkers(svg);
+ const onPath=id=>s.final&&s.path&&s.path.includes(id);
+ const inHeap=new Set(s.heap.filter(e=>e.g<=(s.best[e.id]===undefined?1e9:s.best[e.id])&&!s.closed.has(e.id)).map(e=>e.id));
+ if(G.kind==='grid'){
+  const cs=cellSize(),W=cfg.cols*cs+4,H=cfg.rows*cs+4;svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const ctr=id=>{const [r,c]=id.split(',').map(Number);return [2+c*cs+cs/2,2+r*cs+cs/2];};
+  for(let r=0;r<cfg.rows;r++)for(let c=0;c<cfg.cols;c++){
+   const id=r+','+c,x=2+c*cs,y=2+r*cs;
+   if(cfg.walls.has(id)){el('rect',{x,y,width:cs-2,height:cs-2,rx:5,fill:'#162C46','data-id':id},svg);continue;}
+   let fill=bgOf(id),stroke='#B8C4CF',sw=1.2,dash='',txt='#162C46';
+   if(s.closed.has(id)){stroke='#087D73';sw=3.2;}
+   if(inHeap.has(id)){stroke='#C98A00';sw=2.8;dash='5 3';}
+   if(s.cur===id&&!s.final){fill='#F5B942';stroke='#162C46';sw=2.8;dash='';}
+   if(onPath(id)){fill='#087D73';stroke='#087D73';txt='#fff';dash='';}
+   if(s.cand===id&&!s.final){stroke='#C98A00';sw=4.5;dash='';}
+   el('rect',{x,y,width:cs-2,height:cs-2,rx:5,fill,stroke,'stroke-width':sw,'stroke-dasharray':dash,'data-id':id},svg);
+   const b=s.best[id];const t=el('text',{x:x+cs/2-1,y:y+cs/2+cs*.13,'text-anchor':'middle','font-size':cs*(b===undefined?.3:.38),fill:b===undefined?'#9AA9B8':txt,'font-weight':'700','pointer-events':'none'},svg);t.textContent=fmt(b);
+   const tc=cfg.terr.get(id);if(tc){const q=el('text',{x:x+cs-6,y:y+cs-6,'text-anchor':'end','font-size':cs*.22,fill:txt==='#fff'?'#fff':'#5A6B7D','pointer-events':'none'},svg);q.textContent=(tc===5?'沼':'岩')+tc;}
+   if(id===G.start||id===G.goal){const q=el('text',{x:x+4,y:y+cs*.28,'font-size':cs*.26,fill:txt==='#fff'?'#fff':'#087D73','font-weight':'700','pointer-events':'none'},svg);q.textContent=(id===G.start&&id===G.goal)?'S=T':(id===G.start?'S':'T');}
+   if(s.closed.has(id)){const q=el('text',{x:x+cs-5,y:y+cs*.27,'text-anchor':'end','font-size':cs*.24,fill:txt==='#fff'?'#fff':'#087D73','font-weight':'700','pointer-events':'none'},svg);q.textContent='✓';}
+  }
+  if(cfg.arrows)for(const n in s.parent){const p=s.parent[n],a=ctr(n),b=ctr(p),f=shorten(a[0],a[1],b[0],b[1],cs*.12,cs*.2);const onP=onPath(n)&&onPath(p);el('line',{x1:f[0],y1:f[1],x2:f[2],y2:f[3],stroke:onP?'#fff':'#5F7388','stroke-width':1.8,'marker-end':onP?'':'url(#ahG)','pointer-events':'none'},svg);}
+  if(s.final&&s.path&&s.path.length>1)el('polyline',{points:s.path.map(ctr).map(p=>p.join(',')).join(' '),fill:'none',stroke:'#FFF0CB','stroke-width':4,'stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none',opacity:.9},svg);
+ }else{
+  svg.setAttribute('viewBox','0 0 640 420');
+  const R=28;
+  ROAD.edges.forEach(([a,b,w])=>{const p=ROAD.pos[a],q=ROAD.pos[b],f=shorten(p[0],p[1],q[0],q[1],R+2,R+6);
+   const tree=s.parent[b]===a,onP=s.final&&s.path&&s.path.some((n,i)=>n===a&&s.path[i+1]===b),cand=!s.final&&s.cur===a&&s.cand===b;
+   const col=onP?'#087D73':cand?'#C98A00':(tree&&cfg.arrows?'#4F9C94':'#9AA9B8'),sw=onP?7:cand?5:(tree&&cfg.arrows?4:2.4);
+   el('line',{x1:f[0],y1:f[1],x2:f[2],y2:f[3],stroke:col,'stroke-width':sw,'marker-end':'url(#'+(onP||tree&&cfg.arrows?'ahT':cand?'ahA':'ahG')+')'},svg);
+   const mx=(f[0]+f[2])/2,my=(f[1]+f[3])/2,dx=f[2]-f[0],dy=f[3]-f[1],d=Math.hypot(dx,dy)||1,ox=-dy/d*20,oy=dx/d*20;
+   el('rect',{x:mx+ox-14,y:my+oy-13,width:28,height:26,rx:5,fill:'#fff',stroke:col,'stroke-width':1.5},svg);
+   const t=el('text',{x:mx+ox,y:my+oy+6,'text-anchor':'middle','font-size':17,'font-weight':'700',fill:'#162C46'},svg);t.textContent=w;});
+  for(const id of G.nodes){const [x,y]=ROAD.pos[id];let fill='#fff',stroke='#B8C4CF',sw=1.5,dash='',txt='#162C46';
+   if(s.closed.has(id)){stroke='#087D73';sw=4;fill='#E7F5F2';}
+   if(inHeap.has(id)){stroke='#C98A00';sw=3;dash='5 3';}
+   if(s.cur===id&&!s.final){fill='#F5B942';stroke='#162C46';sw=3;dash='';}
+   if(onPath(id)){fill='#087D73';stroke='#087D73';txt='#fff';dash='';}
+   el('circle',{cx:x,cy:y,r:R,fill,stroke,'stroke-width':sw,'stroke-dasharray':dash},svg);
+   const t=el('text',{x,y:y+7,'text-anchor':'middle','font-size':22,'font-weight':'700',fill:txt},svg);t.textContent=id;
+   const g=el('text',{x,y:y+R+22,'text-anchor':'middle','font-size':16,'font-weight':'700',fill:s.best[id]===undefined?'#9AA9B8':'#087D73'},svg);g.textContent='g = '+fmt(s.best[id]);}
+ }
+}
+function needPredict(){const n=Player.steps[Player.i+1];return cfg.predict&&n&&n.type==='pop'&&!predicted;}
+function renderHeap(s,G,np){
+ const host=$('heapChips');host.innerHTML='';const L=G.label;
+ if(!s.heap.length){host.innerHTML='<span class="small">（空）</span>';return;}
+ s.heap.forEach((e,i)=>{const stale=!cfg.lockMode&&(s.closed.has(e.id)||e.g>s.best[e.id]);const sp=document.createElement('span');sp.className='chip'+(i===0?' head':'')+(stale?' stale':'')+(np?' pick':'');sp.textContent=L(e.id)+' = '+e.g;if(np)sp.onclick=()=>predict(e);host.appendChild(sp);});
+}
+function render(){
+ const s=Player.cur(),G=makeGraph(),L=G.label;cfg.lockMode=cfg.relax==='lock';
+ drawBoard(s,G);$('msg').innerHTML=s.msg;
+ const np=needPredict();renderHeap(s,G,np);
+ $('heapHint').innerHTML=np?'<b>预测模式</b>：点击你认为<b>下一个被取出</b>的记录。':'深色标签是下一个取出的；灰色划线的是“过期记录”（账本里已有更小的值）。同费用时按入堆先后。';
+ const ids=Object.keys(s.best).sort((a,b)=>s.best[a]-s.best[b]);
+ let rows='<tr><th>节点</th><th>best（g）</th><th>来路</th><th>状态</th></tr>';
+ ids.forEach(id=>{const st=s.closed.has(id)?'已定案 ✓':'候选';rows+=`<tr><td>${L(id)}</td><td>${s.best[id]}</td><td>${s.parent[id]!==undefined?L(s.parent[id]):'—'}</td><td>${st}</td></tr>`;});
+ $('ledger').innerHTML=rows;
+ $('sPops').textContent=s.stats.pops;$('sStale').textContent=s.stats.stale;$('sRelax').textContent=s.stats.relax;$('sPush').textContent=s.stats.pushes;
+ const opt=CMP&&CMP.dj?CMP.dj.cost:null;$('sOpt').textContent=opt===null?'无路':opt;
+ let cs='—',verdict='';
+ if(s.final){if(s.found){cs=s.cost;verdict=(cs===opt)?`<span class="good">✓ 费用 ${cs} = 真实最低费用 ${opt}。</span>`:`<span class="bad">✗ 费用 ${cs}，但真实最低是 ${opt}：多花了 ${cs-opt}。</span>`;}else{verdict=opt===null?'<span class="good">✓ 确实不可达。</span>':'<span class="bad">✗ 其实有路。</span>';}}
+ $('sCost').textContent=cs;$('verdict').innerHTML=verdict;
+ let t='<tr><th></th><th>步数</th><th>总费用</th><th>处理/展开节点数</th><th>路线</th></tr>';
+ const row=(n,r)=>r?`<tr><td><b>${n}</b></td><td>${r.steps}</td><td>${r.cost}</td><td>${r.pops}</td><td style="text-align:left">${r.path.map(L).join('→')}</td></tr>`:`<tr><td><b>${n}</b></td><td colspan="4">无路</td></tr>`;
+ if(CMP){t+=row('BFS（只数步）',CMP.bfs)+row('Dijkstra（比总费用）',CMP.dj);}
+ $('cmp').innerHTML=t;
+ let ct='';if(CMP&&CMP.bfs&&CMP.dj){const ds=CMP.bfs.steps-CMP.dj.steps,dc=CMP.bfs.cost-CMP.dj.cost;ct=dc>0?`BFS 少走 ${-ds<0?-ds:0} 步，却多花 ${dc}：<b>步数少不等于费用低</b>。`.replace('少走 0 步','步数不多于 Dijkstra'):'这张图上两者总费用相同（例如每步同价时）。';if(dc>0&&ds<0)ct=`BFS 比 Dijkstra 少走 ${-ds} 步，却多花 ${dc} 费用：<b>步数少不等于费用低</b>。`;if(dc>0&&ds>=0)ct=`BFS 的路线多花了 ${dc} 费用：<b>只数步数找不到最低费用</b>。`;}
+ $('cmpTxt').innerHTML=ct;(function(){})();
+ const fl=$('flash');fl.style.display=flashMsg?'block':'none';fl.innerHTML=flashMsg;
+ $('think').innerHTML=thinkText(s);
+ $('bBack').disabled=Player.i===0;$('bStart').disabled=Player.i===0;const last=Player.i>=Player.steps.length-1;$('bNext').disabled=last;$('bEnd').disabled=last;
+ $('bPlay').textContent=Player.playing()?'⏸ 暂停':'▶ 自动播放';
+}
+function thinkText(s){
+ if(s.type==='init')return '<b>思考：</b>为什么除起点外都先记 ∞，而不是 0？';
+ if(s.type==='pop'&&s.skip)return '<b>思考：</b>这条旧记录为什么不能直接丢掉不管，却又不能展开？';
+ if(s.type==='pop')return '<b>思考：</b>这次取出的是堆里最小的 g。如果改用先进先出，会取出谁？结果会怎样？';
+ if(s.type==='check'&&s.improved)return '<b>思考：</b>best 改小了，来路也必须同步改。如果只改数字，最后恢复的路线会花多少？';
+ if(s.type==='check')return '<b>思考：</b>候选没有比旧记录更小，为什么不用更新来路？';
+ if(s.type==='end')return '<b>思考：</b>现在堆里还有比刚才定案的 g 更小的候选吗？为什么不可能？（提示：费用非负）';
+ if(s.final&&s.found)return '<b>思考：</b>对照下面的 BFS 表：谁的步数少？谁的费用低？为什么答案不同？';
+ return '<b>思考：</b>“堆空了”为什么也是一个确定的答案？';
+}
+function recompute(){const G=makeGraph();computeCompare(G);Player.load(runDijkstra(G,{lock:cfg.relax==='lock',stopOnFind:cfg.stop==='discover'}));predicted=false;flashMsg='';render();}
+function tryNext(){if(needPredict()){flashMsg='先预测：点击上方堆里你认为下一个被取出的记录，再继续。';render();return false;}flashMsg='';const ok=Player.forward();predicted=false;render();return ok;}
+function predict(e){const n=Player.steps[Player.i+1];if(!n)return;const L=makeGraph().label;if(e.seq===n.popped.seq){flashMsg=`✓ 预测正确：取出 ${L(e.id)}（g=${e.g}），它是堆里最小的。`;Player.forward();predicted=false;render();}else{flashMsg=`✗ 不是它。堆里<b>累计费用最小</b>的才先取（最左边深色那条）。再看看每条记录的数字。`;render();}}
+function play(){if(Player.playing()){Player.pause();render();return;}if(cfg.predict){flashMsg='预测模式下请手动点“下一步”。';render();return;}if(Player.i>=Player.steps.length-1)Player.i=0;Player.timer=setInterval(()=>{if(!Player.forward())Player.pause();render();},+$('speed').value);render();}
+function applyPreset(key){const p=PRESETS[key];cfg.graph='grid';cfg.rows=p.rows;cfg.cols=p.cols;cfg.walls=new Set(p.walls);cfg.terr=new Map(Object.entries(p.terr).map(([k,v])=>[k,v]));cfg.start=p.start;cfg.goal=p.goal;syncUI();}
+function syncUI(){$('graphSel').value=cfg.graph;$('rows').value=cfg.rows;$('cols').value=cfg.cols;$('relaxSel').value=cfg.relax;$('stopSel').value=cfg.stop;$('presetSel').disabled=$('rows').disabled=$('cols').disabled=$('tool').disabled=cfg.graph==='road';recompute();}
+function jumpFirstRelax(){const i=Player.steps.findIndex(s=>s.type==='check'&&s.improved&&Player.steps[0].best&&/松弛成功/.test(s.msg));if(i>=0){Player.i=i;if(Player.coarse){}}render();}
+function lab(n){cfg.predict=false;$('predict').checked=false;cfg.relax='relax';cfg.stop='pop';Player.coarse=false;$('coarse').checked=false;
+ if(n===1){cfg.graph='road';syncUI();Player.i=Player.steps.length-1;render();}
+ else if(n===2){applyPreset('swamp');Player.i=Player.steps.length-1;render();}
+ else if(n===3){cfg.graph='road';syncUI();jumpFirstRelax();}
+ else if(n===4){cfg.graph='road';cfg.stop='discover';syncUI();Player.i=Player.steps.length-1;render();}
+ else if(n===5){cfg.graph='road';cfg.relax='lock';syncUI();Player.i=Player.steps.length-1;render();}
+ else if(n===6){applyPreset('flat');Player.i=Player.steps.length-1;render();}
+ else if(n===7){applyPreset('mount');}
+ window.scrollTo({top:0,behavior:'smooth'});}
+function init(){
+ const ps=$('presetSel');for(const k in PRESETS){const o=document.createElement('option');o.value=k;o.textContent=PRESETS[k].name;ps.appendChild(o);}
+ ps.onchange=()=>applyPreset(ps.value);
+ $('graphSel').onchange=e=>{cfg.graph=e.target.value;syncUI();};
+ $('relaxSel').onchange=e=>{cfg.relax=e.target.value;recompute();};
+ $('stopSel').onchange=e=>{cfg.stop=e.target.value;recompute();};
+ const resize=()=>{cfg.rows=Math.max(2,Math.min(10,+$('rows').value||6));cfg.cols=Math.max(2,Math.min(12,+$('cols').value||8));const inb=id=>{const [r,c]=id.split(',').map(Number);return r<cfg.rows&&c<cfg.cols;};cfg.walls=new Set([...cfg.walls].filter(inb));cfg.terr=new Map([...cfg.terr].filter(([k])=>inb(k)));if(!inb(cfg.start))cfg.start='0,0';if(!inb(cfg.goal))cfg.goal=(cfg.rows-1)+','+(cfg.cols-1);recompute();};
+ $('rows').onchange=resize;$('cols').onchange=resize;
+ $('coarse').onchange=e=>{Player.coarse=e.target.checked;render();};
+ $('arrows').onchange=e=>{cfg.arrows=e.target.checked;render();};
+ $('predict').onchange=e=>{cfg.predict=e.target.checked;predicted=false;flashMsg='';render();};
+ $('speed').onchange=()=>{if(Player.playing()){Player.pause();play();}};
+ $('bNext').onclick=tryNext;$('bBack').onclick=()=>{flashMsg='';Player.backward();render();};$('bStart').onclick=()=>{Player.pause();Player.i=0;flashMsg='';render();};
+ $('bEnd').onclick=()=>{Player.pause();Player.i=Player.steps.length-1;flashMsg='';render();};$('bPlay').onclick=play;
+ const edit=id=>{if(cfg.graph!=='grid'||!id)return;const t=$('tool').value;
+  if(t==='start'){cfg.walls.delete(id);cfg.start=id;}else if(t==='goal'){cfg.walls.delete(id);cfg.goal=id;}
+  else{if(id===cfg.start||id===cfg.goal)return;if(t==='wall'){cfg.walls.add(id);cfg.terr.delete(id);}else if(t==='flat'){cfg.walls.delete(id);cfg.terr.delete(id);}else{cfg.walls.delete(id);cfg.terr.set(id,t==='rock'?3:5);}}
+  recompute();};
+ const board=$('board');
+ board.addEventListener('mousedown',e=>{const id=e.target.getAttribute&&e.target.getAttribute('data-id');if(!id)return;dragging=true;edit(id);e.preventDefault();});
+ board.addEventListener('mouseover',e=>{if(!dragging)return;const t=$('tool').value;if(t==='start'||t==='goal')return;edit(e.target.getAttribute&&e.target.getAttribute('data-id'));});
+ window.addEventListener('mouseup',()=>{dragging=false;});
+ document.addEventListener('keydown',e=>{const tag=(e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='select')return;if(e.key==='ArrowRight'){tryNext();e.preventDefault();}else if(e.key==='ArrowLeft'){flashMsg='';Player.backward();render();e.preventDefault();}else if(e.key===' '){play();e.preventDefault();}});
+ syncUI();
+}
+init();
+</script></body></html>

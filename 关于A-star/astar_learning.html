@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20分钟看懂 A* 算法（互动版）</title>
+<style>
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f7fa;color:#222;margin:0;line-height:1.7}
+  .wrap{max-width:900px;margin:0 auto;padding:16px}
+  h1{font-size:26px;margin:8px 0}
+  h2{font-size:20px;border-left:5px solid #3b82f6;padding-left:10px;margin-top:32px}
+  .card{background:#fff;border-radius:12px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin:12px 0}
+  .big{font-size:24px;text-align:center;margin:8px 0}
+  .tag{display:inline-block;padding:2px 10px;border-radius:12px;color:#fff;font-size:14px;margin:0 2px}
+  .g{background:#2563eb}.h{background:#d97706}.f{background:#dc2626}
+  canvas{width:100%;max-width:672px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;touch-action:none;cursor:pointer}
+  button,select{font-size:15px;padding:6px 12px;border-radius:8px;border:1px solid #94a3b8;background:#fff;cursor:pointer;margin:3px 2px}
+  button.primary{background:#3b82f6;color:#fff;border-color:#3b82f6}
+  .msg{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;min-height:48px;margin:8px 0}
+  .legend span{display:inline-block;margin-right:12px;font-size:14px}
+  .box{display:inline-block;width:14px;height:14px;border:1px solid #666;vertical-align:middle;margin-right:4px}
+  table{border-collapse:collapse;font-size:14px}
+  td,th{border:1px solid #cbd5e1;padding:3px 10px;text-align:center}
+  details{margin:8px 0}summary{cursor:pointer;font-weight:600}
+  pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto;font-size:13px;line-height:1.5}
+  .stat{font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>20 分钟看懂 A* 算法 🧭</h1>
+<p>读法：先看第 1 节（3 分钟），再到第 2 节动手玩（10 分钟），最后做第 3 节思考题（5 分钟）。</p>
+
+<h2>1. 先听个故事：找便利店</h2>
+<div class="card">
+  <p>你在陌生城市想走到便利店。每到一个路口，你会想两件事：</p>
+  <ul>
+    <li><span class="tag g">g</span> 我<b>已经走了</b>多少步？（真实的）</li>
+    <li><span class="tag h">h</span> 我<b>估计还要走</b>多少步？（用眼睛猜，比如直线距离）</li>
+  </ul>
+  <div class="big"><span class="tag f">f</span> = <span class="tag g">g</span> + <span class="tag h">h</span></div>
+  <p>A* 的全部秘密：<b>每次都选 f 最小的路口走。</b>
+  它既不盲目乱扩散（只看 g，叫 Dijkstra），也不一根筋冲向终点（只看 h，叫贪心）。</p>
+</div>
+
+<h2>2. 动手玩：看它怎么想</h2>
+<div class="card">
+  <p><b>操作：</b>点格子 = 放/拆墙；拖动绿色 S 或红色 T 可以换位置。然后点“下一步”，看右边文字解释。</p>
+  <canvas id="board" width="672" height="448"></canvas>
+  <div class="legend">
+    <span><i class="box" style="background:#bbf7d0"></i>待办 Open（已发现，还没走）</span>
+    <span><i class="box" style="background:#bfdbfe"></i>已处理 Closed</span>
+    <span><i class="box" style="background:#fde047"></i>最终路径</span>
+    <span><i class="box" style="background:#1e293b"></i>墙</span>
+  </div>
+  <p style="font-size:13px;color:#555;margin:4px 0">格子里：左上角 <b style="color:#2563eb">g</b>，右上角 <b style="color:#d97706">h</b>，中间大字 <b style="color:#dc2626">f</b>。红色粗框 = 正在处理的格子。</p>
+  <div>
+    <button class="primary" id="btnStep">▶ 下一步</button>
+    <button id="btnPlay">⏵ 自动播放</button>
+    <button id="btnReset">↺ 重新搜索</button>
+    <select id="selMode">
+      <option value="astar">A*（f = g + h）</option>
+      <option value="dijkstra">Dijkstra（只看 g）</option>
+      <option value="greedy">贪心（只看 h）</option>
+    </select>
+    <select id="selMap">
+      <option value="wall">地图：一堵墙</option>
+      <option value="trap">地图：凹形陷阱</option>
+      <option value="empty">地图：空地</option>
+    </select>
+    <button id="btnClear">清空墙</button>
+    <label style="font-size:14px">速度 <input type="range" id="speed" min="1" max="10" value="6"></label>
+  </div>
+  <div class="msg" id="msg">点“下一步”开始。</div>
+  <div class="stat" id="stat"></div>
+  <p style="margin-bottom:4px"><b>待办清单 Open（按 f 从小到大，前 6 个）：</b></p>
+  <div id="openTable"></div>
+</div>
+
+<h2>3. 做完实验，回答这几个问题</h2>
+<div class="card">
+  <details><summary>实验 ①：把模式切成“Dijkstra”再跑一遍，看“已展开格子数”。</summary>
+    <p>数字明显变大。因为 Dijkstra 没有方向感，像水波一样向四周扩散；A* 的 h 像指南针，少走很多冤枉路。</p></details>
+  <details><summary>实验 ②：选“凹形陷阱”地图 + “贪心”模式。会发生什么？</summary>
+    <p>贪心一头扎进 U 形凹槽里，因为那里“看起来离终点近”，之后才退出来绕路，结果路径更长。A* 因为还会看 g（已走了多少），能及时发现“这条路不划算”。</p></details>
+  <details><summary>思考题 ③：如果 h 永远等于 0，A* 变成什么？</summary>
+    <p>f = g，就是 Dijkstra。</p></details>
+  <details><summary>思考题 ④：为什么 h 不能“吹牛”（比真实剩余距离大）？</summary>
+    <p>如果高估，好路线的 f 会被算得太大，被排在后面，A* 可能先走到一条较长的路，错过真正最短的路。保证最短路的条件：h 永远 ≤ 真实剩余距离（称“可容许”）。本页用的曼哈顿距离（横纵格数之和）满足这点。</p></details>
+  <details><summary>思考题 ⑤：现实里哪些地方用 A*？</summary>
+    <p>游戏角色寻路、扫地机器人/移动机器人（如 ROS 导航）规划路线、地图导航（h 常用直线距离）。</p></details>
+</div>
+
+<h2>4. 核心逻辑（6 行伪代码）</h2>
+<div class="card">
+<pre>
+把起点放进 Open（g=0）
+循环：
+    从 Open 取出 f 最小的格子 cur
+    如果 cur 是终点 → 顺着 parent 倒着走回起点，得到路径，结束
+    把 cur 放进 Closed
+    对 cur 的每个邻居 nb（不是墙、不在 Closed）：
+        新 g = cur.g + 1
+        如果新 g 比 nb 以前记录的更小 → 更新 g、记 parent=cur、放进 Open
+Open 空了还没到终点 → 无路可走
+</pre>
+</div>
+
+</div>
+
+<script>
+/* ============ 工具：坐标转 key ============ */
+const key = (x, y) => x + "," + y;
+
+/* ============ 地图类：保存墙、起点、终点 ============ */
+class Grid {
+  constructor(cols, rows) {
+    this.cols = cols;
+    this.rows = rows;
+    this.walls = new Set();
+    this.start = {x: 1, y: 3};
+    this.goal = {x: 10, y: 3};
+  }
+  isWall(x, y) { return this.walls.has(key(x, y)); }
+  inside(x, y) { return x >= 0 && y >= 0 && x < this.cols && y < this.rows; }
+  isSpecial(x, y) {
+    return (x === this.start.x && y === this.start.y) ||
+           (x === this.goal.x && y === this.goal.y);
+  }
+  toggleWall(x, y, value) {
+    if (this.isSpecial(x, y)) return;
+    if (value) this.walls.add(key(x, y)); else this.walls.delete(key(x, y));
+  }
+  loadPreset(name) {
+    this.walls.clear();
+    this.start = {x: 1, y: 3};
+    this.goal = {x: 10, y: 3};
+    if (name === "wall") {
+      for (let y = 0; y <= 5; y++) this.walls.add(key(6, y));
+    } else if (name === "trap") {
+      for (let y = 1; y <= 5; y++) this.walls.add(key(9, y));
+      for (let x = 6; x <= 9; x++) { this.walls.add(key(x, 1)); this.walls.add(key(x, 5)); }
+    }
+  }
+}
+
+/* ============ 搜索类：一次只走一步，方便教学 ============ */
+class Searcher {
+  constructor(grid, mode) {
+    this.grid = grid;
+    this.mode = mode;   // astar / dijkstra / greedy
+    this.reset();
+  }
+  reset() {
+    const s = this.grid.start;
+    this.g = new Map([[key(s.x, s.y), 0]]);   // 已走代价
+    this.parent = new Map();                  // 谁带我来的
+    this.open = [{x: s.x, y: s.y}];           // 待办
+    this.closed = new Set();                  // 已处理
+    this.current = null;
+    this.path = [];
+    this.done = false;
+    this.found = false;
+    this.expanded = 0;
+  }
+  // 曼哈顿距离：只能上下左右走时的“直线距离”
+  h(x, y) {
+    if (this.mode === "dijkstra") return 0;
+    return Math.abs(x - this.grid.goal.x) + Math.abs(y - this.grid.goal.y);
+  }
+  gOf(x, y) { return this.g.get(key(x, y)); }
+  // 不同模式下的“打分”
+  f(x, y) {
+    if (this.mode === "greedy") return this.h(x, y);
+    return this.gOf(x, y) + this.h(x, y);
+  }
+  // 按 f 排序（f 相同时 h 小的优先）
+  sortedOpen() {
+    return [...this.open].sort((a, b) =>
+      this.f(a.x, a.y) - this.f(b.x, b.y) || this.h(a.x, a.y) - this.h(b.x, b.y));
+  }
+  // 走一步，返回给学生看的解释文字
+  step() {
+    if (this.done) return this.found ? "已经找到路径了，点“重新搜索”再来一次。" : "已经确定无路可走。";
+    if (this.open.length === 0) {
+      this.done = true; this.current = null;
+      return "待办清单空了，还没到终点：说明<b>无路可走</b>（被墙围住了）。";
+    }
+    const cur = this.sortedOpen()[0];
+    this.open = this.open.filter(n => n !== cur);
+    this.current = cur;
+    const gc = this.gOf(cur.x, cur.y), hc = this.h(cur.x, cur.y), fc = this.f(cur.x, cur.y);
+    const goal = this.grid.goal;
+    if (cur.x === goal.x && cur.y === goal.y) {
+      this.done = true; this.found = true;
+      this.path = this.buildPath(cur);
+      return `取出 (${cur.x},${cur.y})，它就是终点 🎉 顺着“谁带我来的”倒着走回起点，最短路径共 <b>${this.path.length - 1}</b> 步。`;
+    }
+    this.closed.add(key(cur.x, cur.y));
+    this.expanded++;
+    let added = 0, updated = 0;
+    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (!this.grid.inside(nx, ny) || this.grid.isWall(nx, ny) || this.closed.has(key(nx, ny))) continue;
+      const ng = gc + 1;
+      const old = this.g.get(key(nx, ny));
+      if (old === undefined) {
+        this.g.set(key(nx, ny), ng); this.parent.set(key(nx, ny), cur);
+        this.open.push({x: nx, y: ny}); added++;
+      } else if (ng < old) {
+        this.g.set(key(nx, ny), ng); this.parent.set(key(nx, ny), cur); updated++;
+      }
+    }
+    const why = this.mode === "greedy"
+      ? `只看 h，h=${hc} 最小`
+      : `f = g + h = ${gc} + ${hc} = <b>${fc}</b> 是待办里最小的`;
+    return `取出 (${cur.x},${cur.y})：${why}。看看它的邻居：新发现 ${added} 个，发现更近走法 ${updated} 个。`;
+  }
+  buildPath(node) {
+    const path = [];
+    let n = node;
+    while (n) { path.push(n); n = this.parent.get(key(n.x, n.y)); }
+    return path.reverse();
+  }
+}
+
+/* ============ 绘图类：把状态画到 canvas ============ */
+class Renderer {
+  constructor(canvas, grid, size) {
+    this.canvas = canvas; this.ctx = canvas.getContext("2d");
+    this.grid = grid; this.size = size;
+  }
+  draw(searcher) {
+    const {ctx, size, grid} = this;
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const pathSet = new Set(searcher.path.map(n => key(n.x, n.y)));
+    const openSet = new Set(searcher.open.map(n => key(n.x, n.y)));
+    for (let y = 0; y < grid.rows; y++) {
+      for (let x = 0; x < grid.cols; x++) {
+        const k = key(x, y), px = x * size, py = y * size;
+        let color = "#ffffff";
+        if (grid.isWall(x, y)) color = "#1e293b";
+        else if (pathSet.has(k)) color = "#fde047";
+        else if (searcher.closed.has(k)) color = "#bfdbfe";
+        else if (openSet.has(k)) color = "#bbf7d0";
+        ctx.fillStyle = color; ctx.fillRect(px, py, size, size);
+        ctx.strokeStyle = "#cbd5e1"; ctx.strokeRect(px, py, size, size);
+        if (!grid.isWall(x, y) && searcher.g.has(k)) this.drawNumbers(searcher, x, y);
+      }
+    }
+    this.drawMarker(grid.start, "S", "#16a34a");
+    this.drawMarker(grid.goal, "T", "#dc2626");
+    if (searcher.current && !searcher.done) {
+      ctx.strokeStyle = "#dc2626"; ctx.lineWidth = 3;
+      ctx.strokeRect(searcher.current.x * size + 2, searcher.current.y * size + 2, size - 4, size - 4);
+      ctx.lineWidth = 1;
+    }
+  }
+  drawNumbers(s, x, y) {
+    const {ctx, size} = this, px = x * size, py = y * size;
+    ctx.font = "11px sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = "#2563eb";
+    if (s.mode !== "greedy") ctx.fillText(s.gOf(x, y), px + 4, py + 13);
+    ctx.textAlign = "right"; ctx.fillStyle = "#d97706";
+    if (s.mode !== "dijkstra") ctx.fillText(s.h(x, y), px + size - 4, py + 13);
+    ctx.textAlign = "center"; ctx.font = "bold 17px sans-serif"; ctx.fillStyle = "#dc2626";
+    ctx.fillText(s.f(x, y), px + size / 2, py + size - 14);
+  }
+  drawMarker(p, text, color) {
+    const {ctx, size} = this;
+    ctx.fillStyle = color; ctx.beginPath();
+    ctx.arc(p.x * size + size / 2, p.y * size + size / 2, size * 0.28, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(text, p.x * size + size / 2, p.y * size + size / 2 + 6);
+  }
+}
+
+/* ============ 应用类：连接按钮、鼠标和各个部件 ============ */
+class App {
+  constructor() {
+    this.size = 56;
+    this.grid = new Grid(12, 8);
+    this.grid.loadPreset("wall");
+    this.canvas = document.getElementById("board");
+    this.renderer = new Renderer(this.canvas, this.grid, this.size);
+    this.searcher = new Searcher(this.grid, "astar");
+    this.timer = null;
+    this.drag = null;          // "start" / "goal" / "paint" / null
+    this.paintValue = true;
+    this.bind();
+    this.refresh("点“下一步”开始。");
+  }
+  $(id) { return document.getElementById(id); }
+  bind() {
+    this.$("btnStep").onclick = () => { this.stopPlay(); this.doStep(); };
+    this.$("btnPlay").onclick = () => this.togglePlay();
+    this.$("btnReset").onclick = () => this.restart();
+    this.$("selMode").onchange = () => this.restart();
+    this.$("selMap").onchange = () => { this.grid.loadPreset(this.$("selMap").value); this.restart(); };
+    this.$("btnClear").onclick = () => { this.grid.walls.clear(); this.restart(); };
+    const c = this.canvas;
+    c.addEventListener("pointerdown", e => this.onDown(e));
+    c.addEventListener("pointermove", e => this.onMove(e));
+    window.addEventListener("pointerup", () => { this.drag = null; });
+  }
+  cellAt(e) {
+    const r = this.canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * this.grid.cols);
+    const y = Math.floor((e.clientY - r.top) / r.height * this.grid.rows);
+    return {x, y};
+  }
+  onDown(e) {
+    const {x, y} = this.cellAt(e), g = this.grid;
+    if (!g.inside(x, y)) return;
+    if (x === g.start.x && y === g.start.y) this.drag = "start";
+    else if (x === g.goal.x && y === g.goal.y) this.drag = "goal";
+    else { this.drag = "paint"; this.paintValue = !g.isWall(x, y); g.toggleWall(x, y, this.paintValue); }
+    this.restart();
+  }
+  onMove(e) {
+    if (!this.drag) return;
+    const {x, y} = this.cellAt(e), g = this.grid;
+    if (!g.inside(x, y)) return;
+    if (this.drag === "paint") g.toggleWall(x, y, this.paintValue);
+    else if (!g.isWall(x, y) && !g.isSpecial(x, y)) g[this.drag === "start" ? "start" : "goal"] = {x, y};
+    this.restart();
+  }
+  restart() {
+    this.stopPlay();
+    this.searcher = new Searcher(this.grid, this.$("selMode").value);
+    this.refresh("点“下一步”开始。");
+  }
+  doStep() { this.refresh(this.searcher.step()); }
+  togglePlay() {
+    if (this.timer) { this.stopPlay(); return; }
+    if (this.searcher.done) this.restart();
+    this.$("btnPlay").textContent = "⏸ 暂停";
+    const delay = 1100 - this.$("speed").value * 100;
+    this.timer = setInterval(() => {
+      this.doStep();
+      if (this.searcher.done) this.stopPlay();
+    }, delay);
+  }
+  stopPlay() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null; this.$("btnPlay").textContent = "⏵ 自动播放";
+  }
+  refresh(message) {
+    const s = this.searcher;
+    this.renderer.draw(s);
+    this.$("msg").innerHTML = message;
+    this.$("stat").innerHTML = `已展开格子数：<b>${s.expanded}</b>　待办：${s.open.length}　` +
+      (s.found ? `路径步数：<b>${s.path.length - 1}</b>` : "");
+    const rows = s.sortedOpen().slice(0, 6).map(n =>
+      `<tr><td>(${n.x},${n.y})</td><td>${s.gOf(n.x, n.y)}</td><td>${s.h(n.x, n.y)}</td><td><b>${s.f(n.x, n.y)}</b></td></tr>`).join("");
+    this.$("openTable").innerHTML = rows
+      ? `<table><tr><th>格子</th><th>g</th><th>h</th><th>f</th></tr>${rows}</table>` : "（空）";
+  }
+}
+
+new App();
+</script>
+</body>
+</html>

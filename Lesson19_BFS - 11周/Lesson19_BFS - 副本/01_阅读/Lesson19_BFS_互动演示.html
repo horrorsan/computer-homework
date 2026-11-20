@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第19课 · BFS 交互演示</title><style>
+:root{--navy:#162C46;--teal:#087D73;--mint:#E7F5F2;--pale:#F1F5F9;--amber:#FFF0CB;--amber2:#F5B942;--grey:#8296A6;--red:#B4432F}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;color:var(--navy);background:#fff;line-height:1.65;font-size:15px}
+header{padding:18px 28px 6px}
+.tag{display:inline-block;background:var(--mint);color:var(--teal);font-weight:700;padding:3px 12px;border-radius:4px;font-size:13px}
+h1{font-size:28px;margin:8px 0 4px}
+h2{font-size:17px;margin:0 0 8px;color:var(--teal)}
+.lead{margin:0;max-width:1180px;font-size:16px}
+main{display:grid;grid-template-columns:minmax(440px,1.1fr) minmax(380px,1fr);gap:18px;padding:12px 28px 20px;align-items:start}
+@media(max-width:1000px){main{grid-template-columns:1fr}}
+.panel{background:var(--pale);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.panel.white{background:#fff;border:1px solid #D6DEE6}
+.bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
+.bar label{font-size:13px;display:flex;align-items:center;gap:4px}
+select,input[type=number]{font:inherit;font-size:13px;padding:3px 6px;border:1px solid #B8C4CF;border-radius:4px;background:#fff;color:var(--navy)}
+input[type=number]{width:54px}
+button{font:inherit;font-size:14px;border:0;border-radius:5px;padding:6px 14px;background:var(--teal);color:#fff;cursor:pointer}
+button.ghost{background:#fff;color:var(--teal);border:1px solid var(--teal)}
+button:disabled{opacity:.4;cursor:default}
+button.exp{background:var(--mint);color:var(--teal);border:1px solid var(--teal);font-size:13px;padding:4px 10px}
+svg{display:block;width:100%;height:auto;max-height:520px;background:#fff;border-radius:6px;user-select:none}
+.msg{background:#fff;border-left:5px solid var(--teal);padding:8px 12px;border-radius:0 6px 6px 0;min-height:76px;font-size:15px}
+.msg b{color:var(--teal)}
+.flash{margin:6px 0 0;padding:6px 10px;background:var(--amber);border-radius:5px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:38px;padding:6px;background:#fff;border-radius:6px;border:1px dashed #B8C4CF}
+.chip{background:var(--mint);color:var(--navy);border:1px solid var(--teal);border-radius:5px;padding:2px 9px;font-size:14px;font-weight:600}
+.chip.head{background:var(--teal);color:#fff}
+.chip.stale{opacity:.45;text-decoration:line-through}
+.chip.pick{cursor:pointer;box-shadow:0 0 0 2px var(--amber2)}
+.small{font-size:13px;color:#4A5F77}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff}
+th,td{border:1px solid #D6DEE6;padding:3px 8px;text-align:center}
+th{background:var(--mint);color:var(--teal)}
+.scroll{max-height:200px;overflow:auto}
+.think{background:var(--amber);border-radius:6px;padding:8px 12px;font-size:14.5px}
+.good{color:var(--teal);font-weight:700}.bad{color:var(--red);font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:#4A5F77;margin-top:6px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #9AA9B8}
+.labs{padding:0 28px 30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.lab{border:1px solid #D6DEE6;border-radius:8px;padding:12px 14px}
+.lab h3{margin:0 0 4px;font-size:15.5px}
+.lab p{margin:4px 0 8px;font-size:14px}
+footer{padding:0 28px 26px;font-size:13px;color:#4A5F77}
+kbd{background:#fff;border:1px solid #B8C4CF;border-radius:3px;padding:0 5px;font-size:12px}
+</style></head><body>
+<header><span class="tag">第19课 · M4-3 · 网格与 BFS</span>
+<h1>BFS：按层探索，第一次到达就是最少步数</h1>
+<p class="lead">这个页面可以直接在浏览器中打开运行。点“下一步”，看 BFS 每一轮怎样<b>取出队头 → 检查邻居 → 登记并排到队尾</b>；再用右侧实验把关键规则改坏，看看结果为什么会错。</p></header>
+<main>
+<section>
+ <div class="panel">
+  <div class="bar">
+   <label>地图 <select id="graphSel"><option value="grid">地牢网格</option><option value="room">房间图（课件 S-A-B-C-T）</option></select></label>
+   <label>预设 <select id="presetSel"></select></label>
+   <label>行 <input type="number" id="rows" min="2" max="12" value="6"></label>
+   <label>列 <input type="number" id="cols" min="2" max="14" value="8"></label>
+   <label>点击格子 <select id="tool"><option value="wall">画墙 / 擦墙</option><option value="start">设起点 S</option><option value="goal">设终点 T</option></select></label>
+  </div>
+  <svg id="board" viewBox="0 0 640 420"></svg>
+  <div class="legend"><span><i style="background:#F5B942"></i>当前取出</span><span><i style="background:#fff;border:2px dashed #087D73"></i>在队列/栈中</span><span><i style="background:hsl(168,50%,78%)"></i>已处理（数字=层数）</span><span><i style="background:#087D73"></i>最终路线</span><span><i style="background:#162C46"></i>墙</span><span>灰箭头：came_from（首次来路）</span></div>
+ </div>
+ <div class="panel">
+  <div class="bar">
+   <button id="bStart" class="ghost">⏮ 回到开头</button><button id="bBack" class="ghost">◀ 上一步</button><button id="bNext">下一步 ▶</button><button id="bPlay">▶ 自动播放</button><button id="bEnd" class="ghost">⏭ 直接到结果</button>
+  </div>
+  <div class="bar">
+   <label>速度 <input type="range" id="speed" min="150" max="1500" value="750" style="width:120px"></label>
+   <label><input type="checkbox" id="coarse">每次一整轮（取出 X 并检查完所有邻居）</label>
+   <label><input type="checkbox" id="arrows" checked>显示来路箭头</label>
+   <label><input type="checkbox" id="predict">预测模式：先猜下一个取出谁</label>
+  </div>
+  <div class="small">快捷键：<kbd>→</kbd> 下一步　<kbd>←</kbd> 上一步　<kbd>空格</kbd> 播放/暂停。画墙时可按住鼠标拖动。</div>
+ </div>
+</section>
+<section>
+ <div class="panel white"><h2>这一步发生了什么？</h2><div id="msg" class="msg"></div><div id="flash" class="flash" style="display:none"></div></div>
+ <div class="panel">
+  <h2 id="boxTitle">队列 frontier</h2><div id="boxChips" class="chips"></div>
+  <div class="small" id="boxHint" style="margin-top:6px"></div>
+  <div class="bar" style="margin-top:10px"><label>等待容器 <select id="container"><option value="queue">队列（先进先出）— 正确</option><option value="stack">栈（后进先出）— 对照</option></select></label>
+  <label>登记时机 <select id="mark"><option value="push">首次发现就登记（入队时）— 正确</option><option value="pop">取出时才登记 — 对照</option></select></label></div>
+ </div>
+ <div class="panel"><h2>三份记录</h2>
+  <table><tr><th>记录</th><th>内容</th></tr><tr><td>seen / 已发现</td><td id="seenTxt" style="text-align:left"></td></tr><tr><td>came_from / 首次来路</td><td id="parentTxt" style="text-align:left"></td></tr><tr><td>已处理（出队）</td><td id="closedTxt" style="text-align:left"></td></tr></table>
+ </div>
+ <div class="panel"><h2>统计</h2>
+  <table><tr><th>取出次数</th><th>入队次数</th><th>重复入队</th><th>路线步数</th><th>真实最少步数</th></tr><tr><td id="sPops">0</td><td id="sPush">0</td><td id="sDup">0</td><td id="sLen">—</td><td id="sOpt">—</td></tr></table>
+  <div id="verdict" style="margin-top:8px"></div>
+ </div>
+ <div class="think" id="think"></div>
+</section>
+</main>
+<div class="labs">
+ <div class="lab"><h3>实验① 把队列换成栈</h3><p>栈是“后进先出”，新发现的点会插到最前面。点按钮后连续点“下一步”，观察出队顺序和最后的路线。</p><button class="exp" onclick="lab(1)">载入：空地 7×7 + 栈</button> <button class="exp" onclick="lab(7)">对照：房间图 + 栈</button><p class="small">你应看到：栈沿着一个方向一直深入，最后找到出口，但路线明显绕远（本例 12 步，真实最少 6 步）。房间图里栈恰好先走 B，碰巧是对的——<b>“恰好对”不能证明这种做法总正确</b>，层序必须由队列守住。</p></div>
+ <div class="lab"><h3>实验② 取出时才登记</h3><p>把“登记时机”改成取出时。看右侧“重复入队”和队列里的重复项。</p><button class="exp" onclick="lab(2)">载入：空地 3×3 + 出队登记</button><p class="small">你应看到：(1,1) 被 (0,1) 和 (1,0) 各排一次。路线可能仍对，但队列变长、工作重复；真实地图越大越浪费。<b>入队时登记</b>才能一格只排一次。</p></div>
+ <div class="lab"><h3>实验③ 层数像水波</h3><p>载入空地，打开“每次一整轮”，观察数字 0、1、2…怎样一圈圈扩大。</p><button class="exp" onclick="lab(3)">载入：空地 7×7</button><p class="small">你应看到：和起点同样“步数”的格子几乎同时被处理，形成菱形波纹。第一次到达出口的那一圈，就是最少步数。</p></div>
+ <div class="lab"><h3>实验④ 不可达与原地</h3><p>两个边界：被墙隔断时队列会耗尽；起点等于终点时 0 步成功。</p><button class="exp" onclick="lab(4)">载入：隔断地图</button> <button class="exp" onclick="lab(5)">载入：原地</button><p class="small">你应看到：隔断时 BFS 把所有可达格子查完，才报告失败，不会无限绕圈；原地时直接成功，路径只含起点，步数 0。</p></div>
+ <div class="lab"><h3>实验⑤ 自己设计地图</h3><p>画墙、拖动 S 和 T，先在纸上预测最少步数，再运行验证。</p><button class="exp" onclick="lab(6)">载入：迷宫</button><p class="small">试一试：只在出口前留一个缺口，看看队列怎样“挤”过缺口；再把缺口堵上，看看会发生什么。</p></div>
+</div>
+<footer>与课件对应：分层 → 队列 → seen 入队即登记 → came_from 回溯 → 目标出队才停止。复杂度：每格最多入队一次，W×H 网格最坏时间与额外空间都是 O(W·H)。</footer>
+<script>
+
+const NS='http://www.w3.org/2000/svg';
+const $=id=>document.getElementById(id);
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in (attrs||{}))e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function shorten(x1,y1,x2,y2,r1,r2){const dx=x2-x1,dy=y2-y1,d=Math.hypot(dx,dy)||1;return [x1+dx/d*r1,y1+dy/d*r1,x2-dx/d*r2,y2-dy/d*r2];}
+function addMarkers(svg){const defs=el('defs',{},svg);[['ahG','#8296A6'],['ahT','#087D73'],['ahA','#C98A00']].forEach(([id,c])=>{const m=el('marker',{id:id,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'6',markerHeight:'6',orient:'auto'},defs);el('path',{d:'M0,0 L10,5 L0,10 z',fill:c},m);});}
+const Player={steps:[],i:0,timer:null,coarse:false,speed:800,
+ load(steps){this.steps=steps;this.i=0;this.pause();},
+ cur(){return this.steps[this.i];},
+ forward(){let j=this.i+1;if(this.coarse){while(j<this.steps.length-1&&!this.steps[j].major)j++;}if(j<this.steps.length){this.i=j;return true;}return false;},
+ backward(){let j=this.i-1;if(this.coarse){while(j>0&&!this.steps[j].major)j--;}if(j>=0){this.i=j;return true;}return false;},
+ pause(){if(this.timer){clearInterval(this.timer);this.timer=null;}},
+ playing(){return !!this.timer;}
+};
+
+const ROOM={pos:{S:[80,205],A:[225,75],B:[260,335],C:[440,75],T:[570,205]},adj:{S:['A','B'],A:['S','C'],B:['S','T'],C:['A','T'],T:['B','C']}};
+const cfg={graph:'grid',rows:6,cols:8,walls:new Set(),start:'0,0',goal:'5,7',container:'queue',mark:'push',arrows:true,predict:false};
+const PRESETS={
+ lesson:{name:'课件 3×3（中心是墙）',rows:3,cols:3,walls:['1,1'],start:'0,0',goal:'2,2'},
+ maze:{name:'迷宫 6×8',rows:6,cols:8,walls:['0,3','1,1','1,3','1,5','1,6','2,1','2,3','3,3','3,5','4,1','4,2','4,3','4,5','5,5'],start:'0,0',goal:'5,7'},
+ open3:{name:'空地 3×3',rows:3,cols:3,walls:[],start:'0,0',goal:'2,2'},
+ open7:{name:'空地 7×7（看层数波纹）',rows:7,cols:7,walls:[],start:'3,3',goal:'6,6'},
+ blocked:{name:'被墙隔断（不可达）',rows:5,cols:5,walls:['0,2','1,2','2,2','3,2','4,2'],start:'2,0',goal:'2,4'},
+ same:{name:'起点等于终点',rows:4,cols:4,walls:['1,1'],start:'1,0',goal:'1,0'}
+};
+let predicted=false,flashMsg='',dragging=false,paintWall=true;
+function makeGraph(){
+ if(cfg.graph==='room'){return {kind:'room',start:'S',goal:'T',nodes:['S','A','B','C','T'],label:id=>id,blocked:()=>false,nbrs:id=>ROOM.adj[id]};}
+ const R=cfg.rows,C=cfg.cols,W=cfg.walls,nodes=[];
+ for(let r=0;r<R;r++)for(let c=0;c<C;c++)nodes.push(r+','+c);
+ const dirs=[[-1,0],[0,1],[1,0],[0,-1]];
+ return {kind:'grid',start:cfg.start,goal:cfg.goal,nodes,label:id=>'('+id+')',blocked:id=>W.has(id),
+  nbrs:id=>{const [r,c]=id.split(',').map(Number),out=[];for(const [dr,dc] of dirs){const nr=r+dr,nc=c+dc;if(nr<0||nc<0||nr>=R||nc>=C)continue;const k=nr+','+nc;if(!W.has(k))out.push(k);}return out;}};
+}
+function tracePath(parent,start,goal){const p=[goal];let g=goal,n=0;while(g!==start&&parent[g]!==undefined&&n++<5000){g=parent[g];p.push(g);}if(g!==start)return null;return p.reverse();}
+function shortestLen(G){if(G.blocked(G.start)||G.blocked(G.goal))return null;const d={[G.start]:0},q=[G.start];while(q.length){const x=q.shift();if(x===G.goal)return d[x];for(const n of G.nbrs(x))if(d[n]===undefined){d[n]=d[x]+1;q.push(n);}}return null;}
+function runBFS(G,o){
+ const steps=[],L=G.label,dist={},parent={},disc=new Set(),closed=new Set(),stats={pops:0,pushes:0,dups:0,skipped:0};let box=[];
+ const snap=x=>steps.push(Object.assign({box:box.slice(),disc:new Set(disc),closed:new Set(closed),parent:Object.assign({},parent),dist:Object.assign({},dist),stats:Object.assign({},stats)},x));
+ const qname=o.container==='queue'?'队列':'栈';
+ if(G.blocked(G.start)||G.blocked(G.goal)){snap({type:'done',found:false,final:true,major:true,msg:'<b>起点或终点是墙</b>，不可通行：直接失败，不展开任何格子。'});return steps;}
+ box=[G.start];disc.add(G.start);dist[G.start]=0;stats.pushes=1;
+ snap({type:'init',major:true,msg:`<b>初始化</b>：把起点 ${L(G.start)} 放进${qname}`+(o.mark==='push'?'，并立刻登记到 seen。':'。（本模式不在此登记，要等取出时才登记）')+`<br>规则：每轮从${o.container==='queue'?'队头':'栈顶'}取一个，检查它的邻居。`});
+ while(box.length){
+  const x=o.container==='queue'?box.shift():box.pop();
+  if(o.mark==='pop'&&closed.has(x)){stats.skipped++;snap({type:'pop',skip:true,cur:x,major:true,msg:`取出 ${L(x)}，但它<b>已经处理过</b>（同一个格子被排了多次），跳过。`});continue;}
+  closed.add(x);stats.pops++;
+  snap({type:'pop',cur:x,msg:`<b>取出</b> ${L(x)}（离起点 <b>${dist[x]}</b> 步）。`+(x===G.goal?'<br>它就是终点：<b>目标出队，搜索停止</b>，开始按 came_from 回溯。':'<br>接下来按固定顺序检查它的邻居'+(G.kind==='grid'?'（北、东、南、西）':'')+'。')});
+  if(x===G.goal){const path=tracePath(parent,G.start,G.goal);snap({type:'done',found:true,final:true,major:true,cur:x,path,msg:`<b>找到了！</b>从终点沿 came_from 倒着走，再反转，得到路线 ${path.map(L).join(' → ')}，共 <b>${path.length-1}</b> 步。`});return steps;}
+  let any=false;
+  for(const n of G.nbrs(x)){
+   const isNew=o.mark==='push'?!disc.has(n):!closed.has(n);
+   if(isNew){
+    const dup=disc.has(n);if(dup)stats.dups++;disc.add(n);parent[n]=x;if(dist[n]===undefined)dist[n]=dist[x]+1;box.push(n);stats.pushes++;any=true;
+    snap({type:'check',cur:x,cand:n,msg:`检查邻居 ${L(n)}：`+(dup?`<span class="bad">它已经在${qname}里了，却又被排了一次（重复入队）</span>，来路被改写为 ${L(x)}。`:`<b>首次发现</b>。登记`+(o.mark==='push'?' seen、':'')+`记来路 ${L(n)} ← ${L(x)}，排到${o.container==='queue'?'队尾':'栈顶'}。`)});
+   }else{
+    snap({type:'check',cur:x,cand:n,msg:`检查邻居 ${L(n)}：`+(o.mark==='push'?'已经发现过，':'已经处理过，')+'<b>跳过</b>，不改来路。'});
+   }
+  }
+  snap({type:'end',cur:x,major:true,msg:`${L(x)} 检查完毕`+(any?'':'，没有新发现')+`。${qname}还剩 ${box.length} 个等待处理。`});
+ }
+ snap({type:'done',found:false,final:true,major:true,msg:`<b>${qname}空了，仍没取出终点</b>：所有能到达的位置都已查完，所以终点不可达。返回 found=False、空路径，不会无限绕圈。`});
+ return steps;
+}
+/* ---------- UI ---------- */
+function cellSize(){return Math.min(64,Math.floor(600/cfg.cols),Math.floor(440/cfg.rows));}
+function layerColor(d){return 'hsl(168,50%,'+Math.max(52,90-d*5)+'%)';}
+function nodeStyle(s,id,G){
+ const onPath=s.final&&s.path&&s.path.includes(id),isCur=s.cur===id&&!s.final,inBox=s.disc.has(id)&&!s.closed.has(id);
+ let fill='#fff',stroke='#B8C4CF',sw=1.2,dash='',txt='#162C46';
+ if(s.closed.has(id)){fill=layerColor(s.dist[id]||0);stroke='#6FA9A2';}
+ if(inBox){fill='#fff';stroke='#087D73';sw=2.6;dash='5 3';}
+ if(isCur){fill='#F5B942';stroke='#162C46';sw=2.6;dash='';}
+ if(onPath){fill='#087D73';stroke='#087D73';txt='#fff';dash='';}
+ if(s.cand===id&&!s.final){stroke='#C98A00';sw=4.5;dash='';}
+ return {fill,stroke,sw,dash,txt};
+}
+function drawBoard(s,G){
+ const svg=$('board');svg.innerHTML='';addMarkers(svg);
+ if(G.kind==='grid'){
+  const cs=cellSize(),W=cfg.cols*cs+4,H=cfg.rows*cs+4;svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const ctr=id=>{const [r,c]=id.split(',').map(Number);return [2+c*cs+cs/2,2+r*cs+cs/2];};
+  for(let r=0;r<cfg.rows;r++)for(let c=0;c<cfg.cols;c++){
+   const id=r+','+c,x=2+c*cs,y=2+r*cs,wall=cfg.walls.has(id);
+   if(wall){const w=el('rect',{x,y,width:cs-2,height:cs-2,rx:5,fill:'#162C46','data-id':id},svg);continue;}
+   const st=nodeStyle(s,id,G);
+   el('rect',{x,y,width:cs-2,height:cs-2,rx:5,fill:st.fill,stroke:st.stroke,'stroke-width':st.sw,'stroke-dasharray':st.dash,'data-id':id},svg);
+   if(s.dist[id]!==undefined){const t=el('text',{x:x+cs/2-1,y:y+cs/2+cs*.14,'text-anchor':'middle','font-size':cs*.38,fill:st.txt,'font-weight':'700','pointer-events':'none'},svg);t.textContent=s.dist[id];}
+   if(id===G.start||id===G.goal){const t=el('text',{x:x+4,y:y+cs*.3,'font-size':cs*.27,fill:st.txt==='#fff'?'#fff':'#087D73','font-weight':'700','pointer-events':'none'},svg);t.textContent=(id===G.start&&id===G.goal)?'S=T':(id===G.start?'S':'T');}
+  }
+  if(cfg.arrows){for(const n in s.parent){const p=s.parent[n];if(s.cur===undefined&&false)continue;const a=ctr(n),b=ctr(p),f=shorten(a[0],a[1],b[0],b[1],cs*.14,cs*.2);const onP=s.final&&s.path&&s.path.includes(n)&&s.path.includes(p);el('line',{x1:f[0],y1:f[1],x2:f[2],y2:f[3],stroke:onP?'#fff':'#8296A6','stroke-width':1.8,'marker-end':onP?'':'url(#ahG)','pointer-events':'none'},svg);}}
+  if(s.final&&s.path&&s.path.length>1){el('polyline',{points:s.path.map(ctr).map(p=>p.join(',')).join(' '),fill:'none',stroke:'#FFF0CB','stroke-width':4,'stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none',opacity:.9},svg);}
+ }else{
+  svg.setAttribute('viewBox','0 0 640 410');
+  const seen=new Set();
+  for(const a in ROOM.adj)for(const b of ROOM.adj[a]){const k=[a,b].sort().join('');if(seen.has(k))continue;seen.add(k);const p=ROOM.pos[a],q=ROOM.pos[b];const f=shorten(p[0],p[1],q[0],q[1],27,27);const tree=(s.parent[a]===b)||(s.parent[b]===a);const onP=s.final&&s.path&&Math.abs(s.path.indexOf(a)-s.path.indexOf(b))===1&&s.path.includes(a)&&s.path.includes(b);el('line',{x1:f[0],y1:f[1],x2:f[2],y2:f[3],stroke:onP?'#087D73':(tree&&cfg.arrows?'#6FA9A2':'#B8C4CF'),'stroke-width':onP?7:(tree&&cfg.arrows?3.5:2.5)},svg);}
+  if(cfg.arrows)for(const n in s.parent){const p=s.parent[n],a=ROOM.pos[n],b=ROOM.pos[p],f=shorten(a[0],a[1],b[0],b[1],30,32);el('line',{x1:f[0],y1:f[1],x2:f[2],y2:f[3],stroke:'#8296A6','stroke-width':1.6,'marker-end':'url(#ahG)',transform:'translate(0,0)'},svg);}
+  for(const id of G.nodes){const [x,y]=ROOM.pos[id],st=nodeStyle(s,id,G);
+   el('circle',{cx:x,cy:y,r:27,fill:st.fill,stroke:st.stroke,'stroke-width':st.sw,'stroke-dasharray':st.dash},svg);
+   const t=el('text',{x,y:y+7,'text-anchor':'middle','font-size':21,'font-weight':'700',fill:st.txt},svg);t.textContent=id;
+   if(s.dist[id]!==undefined){const d=el('text',{x,y:y+50,'text-anchor':'middle','font-size':15,fill:'#087D73','font-weight':'700'},svg);d.textContent='第 '+s.dist[id]+' 层';}}
+ }
+}
+function chips(s,G,needPick){
+ const host=$('boxChips');host.innerHTML='';const L=G.label;
+ if(!s.box.length){host.innerHTML='<span class="small">（空）</span>';return;}
+ s.box.forEach((id,i)=>{const isHead=cfg.container==='queue'?i===0:i===s.box.length-1;const sp=document.createElement('span');sp.className='chip'+(isHead?' head':'')+(needPick?' pick':'');sp.textContent=L(id)+(s.dist[id]!==undefined?' ·'+s.dist[id]:'');if(needPick)sp.onclick=()=>predict(id);host.appendChild(sp);});
+}
+function needPredict(){const n=Player.steps[Player.i+1];return cfg.predict&&n&&n.type==='pop'&&!predicted;}
+function render(){
+ const s=Player.cur(),G=makeGraph(),L=G.label;
+ drawBoard(s,G);
+ $('msg').innerHTML=s.msg;
+ const np=needPredict();
+ $('boxTitle').textContent=cfg.container==='queue'?'队列 frontier：左边是队头（先取），新来的排右边':'栈：右边是栈顶（先取），新来的压在最右边';
+ chips(s,G,np);
+ $('boxHint').innerHTML=np?'<b>预测模式</b>：点击你认为<b>下一个被取出</b>的节点。':(cfg.container==='queue'?'数字是该节点离起点的步数（层）。队头永远是最近的一层。':'注意：栈会让最新发现的点先出，层序被打乱。');
+ $('seenTxt').textContent=[...s.disc].map(L).join('、');
+ $('parentTxt').textContent=Object.keys(s.parent).map(n=>L(n)+' ← '+L(s.parent[n])).join('；')||'（空）';
+ $('closedTxt').textContent=[...s.closed].map(L).join(' → ')||'（空）';
+ $('sPops').textContent=s.stats.pops;$('sPush').textContent=s.stats.pushes;$('sDup').textContent=s.stats.dups;
+ const opt=shortestLen(G);$('sOpt').textContent=opt===null?'无路':opt;
+ let len='—',verdict='';
+ if(s.final){if(s.found){len=s.path.length-1;verdict=(len===opt)?`<span class="good">✓ 路线步数 ${len} = 真实最少步数 ${opt}。</span>`:`<span class="bad">✗ 路线 ${len} 步，但真实最少是 ${opt} 步：这次没有找到最短路线！</span>`;}else{verdict=opt===null?'<span class="good">✓ 确实不可达，结论正确。</span>':'<span class="bad">✗ 其实有路，却报告失败。</span>';}}
+ $('sLen').textContent=len;$('verdict').innerHTML=verdict;
+ const fl=$('flash');fl.style.display=flashMsg?'block':'none';fl.innerHTML=flashMsg;
+ $('think').innerHTML=thinkText(s);
+ $('bBack').disabled=Player.i===0;$('bStart').disabled=Player.i===0;const last=Player.i>=Player.steps.length-1;$('bNext').disabled=last;$('bEnd').disabled=last;
+ $('bPlay').textContent=Player.playing()?'⏸ 暂停':'▶ 自动播放';
+}
+function thinkText(s){
+ if(s.type==='init')return '<b>思考：</b>起点已经在容器里。如果现在就把它标成“已处理”，下一步还能不能找到邻居？';
+ if(s.type==='pop'&&!s.final)return '<b>思考：</b>取出的这个点和上一个点相比，离起点的步数是相同还是多 1？为什么不会出现“多 2”？';
+ if(s.type==='check')return '<b>思考：</b>这个邻居如果已经被发现过，来路还要改吗？改了会怎样？';
+ if(s.type==='end')return '<b>思考：</b>现在队列里最多同时出现几个不同的层？（提示：看数字）';
+ if(s.final&&s.found)return '<b>思考：</b>路线是“倒着回溯再反转”得到的。如果漏掉反转，勇者会从哪里走到哪里？';
+ return '<b>思考：</b>为什么“队列空了”也是一个正确的答案？';
+}
+function recompute(){const G=makeGraph();Player.load(runBFS(G,{container:cfg.container,mark:cfg.mark}));predicted=false;flashMsg='';render();}
+function tryNext(){if(needPredict()){flashMsg='先预测：点击右侧容器里你认为下一个被取出的节点，再继续。';render();return false;}flashMsg='';const ok=Player.forward();predicted=false;render();return ok;}
+function predict(id){const n=Player.steps[Player.i+1];if(!n)return;const L=makeGraph().label;if(id===n.cur){flashMsg=`✓ 预测正确：下一个取出的是 ${L(id)}。`+(cfg.container==='queue'?'队头最先取出。':'栈顶最先取出。');predicted=true;const ok=Player.forward();predicted=false;render();}else{flashMsg=`✗ 不是 ${L(id)}。想一想：${cfg.container==='queue'?'队列从哪一端取？高亮的深色标签就是队头':'栈从哪一端取？高亮的深色标签就是栈顶'}。`;render();}}
+function play(){if(Player.playing()){Player.pause();render();return;}if(cfg.predict){flashMsg='预测模式下请手动点“下一步”。';render();return;}if(Player.i>=Player.steps.length-1){Player.i=0;}Player.timer=setInterval(()=>{if(!Player.forward()){Player.pause();}render();},+$('speed').value);render();}
+function applyPreset(key){const p=PRESETS[key];cfg.graph='grid';cfg.rows=p.rows;cfg.cols=p.cols;cfg.walls=new Set(p.walls);cfg.start=p.start;cfg.goal=p.goal;syncUI();}
+function syncUI(){$('graphSel').value=cfg.graph;$('rows').value=cfg.rows;$('cols').value=cfg.cols;$('container').value=cfg.container;$('mark').value=cfg.mark;$('presetSel').disabled=$('rows').disabled=$('cols').disabled=$('tool').disabled=cfg.graph==='room';recompute();}
+function lab(n){cfg.predict=false;$('predict').checked=false;cfg.container='queue';cfg.mark='push';Player.coarse=false;$('coarse').checked=false;
+ if(n===1){applyPreset('open7');cfg.container='stack';}
+ if(n===7){cfg.graph='room';cfg.container='stack';}
+ if(n===2){applyPreset('open3');cfg.mark='pop';}
+ if(n===3){applyPreset('open7');Player.coarse=true;$('coarse').checked=true;}
+ if(n===4){applyPreset('blocked');}
+ if(n===5){applyPreset('same');}
+ if(n===6){applyPreset('maze');}
+ syncUI();window.scrollTo({top:0,behavior:'smooth'});}
+function init(){
+ const ps=$('presetSel');for(const k in PRESETS){const o=document.createElement('option');o.value=k;o.textContent=PRESETS[k].name;ps.appendChild(o);}
+ ps.onchange=()=>applyPreset(ps.value);
+ $('graphSel').onchange=e=>{cfg.graph=e.target.value;syncUI();};
+ $('container').onchange=e=>{cfg.container=e.target.value;recompute();};
+ $('mark').onchange=e=>{cfg.mark=e.target.value;recompute();};
+ const resize=()=>{cfg.rows=Math.max(2,Math.min(12,+$('rows').value||6));cfg.cols=Math.max(2,Math.min(14,+$('cols').value||8));const inb=id=>{const [r,c]=id.split(',').map(Number);return r<cfg.rows&&c<cfg.cols;};cfg.walls=new Set([...cfg.walls].filter(inb));if(!inb(cfg.start))cfg.start='0,0';if(!inb(cfg.goal))cfg.goal=(cfg.rows-1)+','+(cfg.cols-1);recompute();};
+ $('rows').onchange=resize;$('cols').onchange=resize;
+ $('coarse').onchange=e=>{Player.coarse=e.target.checked;render();};
+ $('arrows').onchange=e=>{cfg.arrows=e.target.checked;render();};
+ $('predict').onchange=e=>{cfg.predict=e.target.checked;predicted=false;flashMsg='';render();};
+ $('speed').onchange=()=>{if(Player.playing()){Player.pause();play();}};
+ $('bNext').onclick=tryNext;$('bBack').onclick=()=>{flashMsg='';Player.backward();render();};$('bStart').onclick=()=>{Player.pause();Player.i=0;flashMsg='';render();};
+ $('bEnd').onclick=()=>{Player.pause();Player.i=Player.steps.length-1;flashMsg='';render();};$('bPlay').onclick=play;
+ const edit=id=>{if(cfg.graph!=='grid'||!id)return;const t=$('tool').value;
+  if(t==='wall'){if(id===cfg.start||id===cfg.goal)return;if(cfg.walls.has(id)===paintWall)return;if(paintWall)cfg.walls.add(id);else cfg.walls.delete(id);}
+  else if(t==='start'){cfg.walls.delete(id);cfg.start=id;}else{cfg.walls.delete(id);cfg.goal=id;}
+  recompute();};
+ const board=$('board');
+ board.addEventListener('mousedown',e=>{const id=e.target.getAttribute&&e.target.getAttribute('data-id');if(!id)return;dragging=true;paintWall=!cfg.walls.has(id);edit(id);e.preventDefault();});
+ board.addEventListener('mouseover',e=>{if(!dragging||$('tool').value!=='wall')return;edit(e.target.getAttribute&&e.target.getAttribute('data-id'));});
+ window.addEventListener('mouseup',()=>{dragging=false;});
+ document.addEventListener('keydown',e=>{const tag=(e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='select')return;if(e.key==='ArrowRight'){tryNext();e.preventDefault();}else if(e.key==='ArrowLeft'){flashMsg='';Player.backward();render();e.preventDefault();}else if(e.key===' '){play();e.preventDefault();}});
+ applyPreset('lesson');
+}
+init();
+</script></body></html>
